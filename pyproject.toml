@@ -1,0 +1,20 @@
+[project]
+name = "otii-mcp"
+version = "0.1.0"
+description = "MCP server for measuring energy consumption with Qoitech Otii Arc/Ace"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Qoitech AB", email = "support@qoitech.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=2.3,<3",
+    "otii-tcp-client>=1.0.13",
+]
+
+[project.scripts]
+otii-mcp = "otii_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
