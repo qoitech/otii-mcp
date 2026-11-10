@@ -1,6 +1,9 @@
 # Otii MCP server
 
-An [MCP](https://modelcontextprotocol.io) server that lets AI assistants measure the energy consumption of your device with a Qoitech **Otii Arc** or **Otii Ace**. You can ask your assistant things like:
+An [MCP](https://modelcontextprotocol.io) server that lets AI assistants measure the energy consumption of your device with a
+Qoitech [Otii Arc](https://www.qoitech.com/otii-arc-pro) or [Otii Ace](https://www.qoitech.com/otii-ace).
+
+You can ask your assistant things like:
 
 > Power my board at 3.3 V for 20 seconds and tell me how much energy one cycle uses.
 
@@ -12,22 +15,22 @@ The server powers your device under test from the Otii, records current and (opt
 
 ## Requirements
 
-- An Otii Arc or Otii Ace connected to your computer.
-- The **Otii 3** desktop application running, with its **TCP server enabled**.
-- An Otii account with an **Automation** license available. The server reserves one license for each tool call and returns it afterwards.
+- An [Otii Arc](https://www.qoitech.com/otii-arc) or [Otii Ace](https://www.qoitech.com/otii-ace) connected to your computer.
+- The [Otii 3](https://home.qoitech.com/download) desktop application or the [otii_server](https://docs.qoitech.com/en/user-manual/automation-toolbox#otii-server) running.
+- An Otii account with an [Automation Toolbox](https://www.qoitech.com/automation-toolbox) license available. The server reserves one license for each tool call and returns it afterwards.
 - [uv](https://docs.astral.sh/uv/getting-started/installation/), used to run the server without a manual install.
 
 ## Configuration
 
 The server is configured through environment variables, set in your MCP client's configuration:
 
-| Variable | Default | Description |
-|---|---|---|
-| `OTII_CREDENTIALS` | | Path to a JSON file with your Otii login (see `credentials.example.json`). |
-| `OTII_USERNAME`, `OTII_PASSWORD` | | Otii login, used when `OTII_CREDENTIALS` is not set or the file is missing. |
-| `OTII_HOST` | `127.0.0.1` | Host running the Otii application. |
-| `OTII_PORT` | `1905` | Otii TCP server port. |
-| `OTII_DEVICE` | | Name of the Otii device to use. Only needed when more than one is connected. |
+| Variable                         | Default     | Description                                                                  |
+|----------------------------------|-------------|------------------------------------------------------------------------------|
+| `OTII_CREDENTIALS`               |             | Path to a JSON file with your Otii login (see `credentials.example.json`).   |
+| `OTII_USERNAME`, `OTII_PASSWORD` |             | Otii login, used when `OTII_CREDENTIALS` is not set or the file is missing.  |
+| `OTII_HOST`                      | `127.0.0.1` | Host running the Otii application.                                           |
+| `OTII_PORT`                      | `1905`      | Otii TCP server port.                                                        |
+| `OTII_DEVICE`                    |             | Name of the Otii device to use. Only needed when more than one is connected. |
 
 If the Otii application is already logged in, no credentials are needed.
 
@@ -35,7 +38,7 @@ A credentials file keeps your password out of the MCP client's configuration:
 
 ```json
 {
-  "username": "your-otii-account@example.com",
+  "username": "your-otii-username",
   "password": "your-otii-password"
 }
 ```
@@ -50,6 +53,19 @@ claude mcp add otii --env OTII_CREDENTIALS=$HOME/.config/otii/credentials.json \
 ```
 
 Add `--scope project` to write it to the repository's `.mcp.json`, so that everyone working on the firmware gets it.
+
+### Codex CLI
+
+Register the server with Codex CLI:
+
+```sh
+codex mcp add otii --env "OTII_CREDENTIALS=$HOME/.config/otii/credentials.json" \
+  -- uvx --from git+https://github.com/qoitech/otii-mcp otii-mcp
+```
+
+Create the credentials file using the format above, or omit `--env` if the Otii application is already logged in. Codex saves the server configuration in `~/.codex/config.toml`.
+
+Run `codex mcp list` to verify registration, then start a new Codex session and use `/mcp` to check that the server is connected. See the [Codex MCP documentation](https://developers.openai.com/codex/mcp) for more configuration options.
 
 ### Claude Desktop, Cursor, VS Code and other clients
 
@@ -79,18 +95,18 @@ Then use `"command": "uv"` with `"args": ["run", "--directory", "/path/to/otii-m
 
 ## Tools
 
-| Tool | Description |
-|---|---|
-| `list_devices` | List connected Otii devices. |
-| `measure` | Power the device under test at a given voltage for a set time and record it. Returns a recording id and whole-recording statistics. Optionally records UART output and extra channels. |
-| `list_recordings` | List recordings in the active Otii project. |
-| `get_log` | Read the recorded UART log, with timestamps, optionally filtered. |
-| `get_statistics` | Energy, charge and min/max/average current between two timestamps. |
-| `energy_between_messages` | Energy between two UART log lines, e.g. one firmware cycle. |
-| `set_gpo` | Switch Otii digital output GPO 1 or 2. |
-| `set_ace_0_15_voltage` | Set the voltage of the Ace 0–15 V pin. |
+| Tool                      | Description |
+|:--------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `list_devices`            | List connected Otii devices.                                                                                                                                                           |
+| `measure`                 | Power the device under test at a given voltage for a set time and record it. Returns a recording id and whole-recording statistics. Optionally records UART output and extra channels. |
+| `list_recordings`         | List recordings in the active Otii project.                                                                                                                                            |
+| `get_log`                 | Read the recorded UART log, with timestamps, optionally filtered.                                                                                                                      |
+| `get_statistics`          | Energy, charge and min/max/average current between two timestamps.                                                                                                                     |
+| `energy_between_messages` | Energy between two UART log lines, e.g. one firmware cycle.                                                                                                                            |
+| `set_gpo`                 | Switch Otii digital output GPO 1 or 2.                                                                                                                                                 |
+| `set_ace_0_15_voltage`    | Set the voltage of the Ace 0–15 V pin.                                                                                                                                                 |
 
-Recordings are stored in the project that is open in the Otii application, so you can open them there for a closer look.
+Recordings are stored in the project that is open in the Otii application, so you can have them there for a closer look.
 
 ## Measuring per-cycle energy with UART log markers
 
