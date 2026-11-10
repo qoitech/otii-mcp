@@ -4,7 +4,6 @@ Requires the Otii 3 desktop application running with its TCP server enabled.
 Each tool call opens its own connection to Otii.
 """
 import importlib.metadata
-from typing import Optional
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -45,8 +44,8 @@ def list_devices() -> list[dict]:
 
 @mcp.tool()
 def measure(main_voltage: float, duration_s: float = 10, max_current_A: float = 0.5,
-            channels: Optional[list[str]] = None, uart_baudrate: Optional[int] = None,
-            exp_voltage: Optional[float] = None, device: Optional[str] = None) -> dict:
+            channels: list[str] | None = None, uart_baudrate: int | None = None,
+            exp_voltage: float | None = None, device: str | None = None) -> dict:
     '''Power the device under test from the Otii main output at main_voltage for duration_s
     seconds and record it, then turn power off. Returns the recording id and statistics for
     the whole recording.
@@ -80,7 +79,7 @@ def measure(main_voltage: float, duration_s: float = 10, max_current_A: float = 
 
 
 @mcp.tool()
-def list_recordings(device: Optional[str] = None) -> list[dict]:
+def list_recordings(device: str | None = None) -> list[dict]:
     '''List recordings in the active Otii project with id, name and length in seconds.'''
     with otii_lib.connect() as otii:
         dev = otii_lib.get_device(otii, device)
@@ -88,7 +87,7 @@ def list_recordings(device: Optional[str] = None) -> list[dict]:
         for rec in otii.get_active_project().get_recordings():
             try:
                 from_s, to_s = otii_lib.get_duration(dev, rec)
-                length: Optional[float] = to_s - from_s
+                length: float | None = to_s - from_s
             except Exception:
                 length = None  # Recorded with another device.
             result.append({'recording_id': rec.id, 'name': rec.name, 'length_s': length})
@@ -96,8 +95,8 @@ def list_recordings(device: Optional[str] = None) -> list[dict]:
 
 
 @mcp.tool()
-def get_log(recording_id: Optional[int] = None, contains: Optional[str] = None,
-            limit: int = 500, device: Optional[str] = None) -> list[dict]:
+def get_log(recording_id: int | None = None, contains: str | None = None,
+            limit: int = 500, device: str | None = None) -> list[dict]:
     '''UART log lines recorded from the device under test, with timestamps in seconds from
     recording start. Defaults to the latest recording. Optionally keep only lines containing
     `contains`.'''
@@ -110,8 +109,8 @@ def get_log(recording_id: Optional[int] = None, contains: Optional[str] = None,
 
 
 @mcp.tool()
-def get_statistics(from_s: float, to_s: float, channel: str = 'mc', recording_id: Optional[int] = None,
-                   device: Optional[str] = None) -> dict:
+def get_statistics(from_s: float, to_s: float, channel: str = 'mc', recording_id: int | None = None,
+                   device: str | None = None) -> dict:
     '''Statistics between two times (seconds from recording start). For the main current
     channel 'mc' this includes energy and charge. Defaults to the latest recording.'''
     with otii_lib.connect() as otii:
@@ -122,8 +121,8 @@ def get_statistics(from_s: float, to_s: float, channel: str = 'mc', recording_id
 
 
 @mcp.tool()
-def energy_between_messages(start_message: str, end_message: Optional[str] = None, occurrence: int = 0,
-                            recording_id: Optional[int] = None, device: Optional[str] = None) -> dict:
+def energy_between_messages(start_message: str, end_message: str | None = None, occurrence: int = 0,
+                            recording_id: int | None = None, device: str | None = None) -> dict:
     '''Energy from the n:th (0-based `occurrence`) UART log line exactly equal to start_message
     to the next line exactly equal to end_message. end_message defaults to start_message, which
     gives one full cycle for firmware that prints a marker once per cycle. Use occurrence >= 1
@@ -137,7 +136,7 @@ def energy_between_messages(start_message: str, end_message: Optional[str] = Non
 
 @mcp.tool()
 def energy_between_gpi_edges(pin: int, high: bool = True, occurrence: int = 0,
-                             recording_id: Optional[int] = None, device: Optional[str] = None) -> dict:
+                             recording_id: int | None = None, device: str | None = None) -> dict:
     '''Energy during the n:th (0-based `occurrence`) interval where Otii digital input GPI
     `pin` (1 or 2) is high (or low if high=false), from the edge into that level to the edge
     out of it. For firmware that sets a GPIO wired to the Otii GPI while in a phase, e.g. active
@@ -162,7 +161,7 @@ def energy_between_gpi_edges(pin: int, high: bool = True, occurrence: int = 0,
 
 
 @mcp.tool()
-def set_gpo(pin: int, enabled: bool, device: Optional[str] = None) -> str:
+def set_gpo(pin: int, enabled: bool, device: str | None = None) -> str:
     '''Set Otii digital output GPO pin 1 or 2. Useful for switching hardware around the
     device under test, e.g. a USB/debugger connection that should be off while measuring.'''
     with otii_lib.connect() as otii:
@@ -171,7 +170,7 @@ def set_gpo(pin: int, enabled: bool, device: Optional[str] = None) -> str:
 
 
 @mcp.tool()
-def set_ace_0_15_voltage(voltage: float, device: Optional[str] = None) -> str:
+def set_ace_0_15_voltage(voltage: float, device: str | None = None) -> str:
     '''Set the voltage of the Ace 0-15 V pin (0 turns it off). Ace only.'''
     with otii_lib.connect() as otii:
         otii_lib.get_device(otii, device).set_0_to_15_voltage(voltage)

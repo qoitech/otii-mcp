@@ -11,7 +11,6 @@ import os
 import sys
 import time
 from collections.abc import Iterator
-from typing import Optional
 
 from mcp.server.mcpserver.exceptions import ToolError
 from otii_tcp_client import arc, otii_client, otii_exception, recording
@@ -69,7 +68,7 @@ def list_devices(otii: otii_client.Connect) -> list[arc.Arc]:
     return otii.get_devices()
 
 
-def get_device(otii: otii_client.Connect, name: Optional[str] = None) -> arc.Arc:
+def get_device(otii: otii_client.Connect, name: str | None = None) -> arc.Arc:
     '''Return the device with the given name, else OTII_DEVICE, else the only connected device.'''
     name = name or os.environ.get('OTII_DEVICE') or None
     devices = otii.get_devices()
@@ -86,8 +85,8 @@ def get_device(otii: otii_client.Connect, name: Optional[str] = None) -> arc.Arc
 
 
 def measure(otii: otii_client.Connect, device: arc.Arc, duration: float, main_voltage: float,
-            max_current: float, channels: list[str], uart_baudrate: Optional[int],
-            exp_voltage: Optional[float]) -> recording.Recording:
+            max_current: float, channels: list[str], uart_baudrate: int | None,
+            exp_voltage: float | None) -> recording.Recording:
     '''Power the device under test from the main output for `duration` seconds while
     recording the given channels, then turn power off.'''
     device.set_main_voltage(main_voltage)
@@ -115,7 +114,7 @@ def measure(otii: otii_client.Connect, device: arc.Arc, duration: float, main_vo
     return rec
 
 
-def get_recording(otii: otii_client.Connect, recording_id: Optional[int] = None) -> recording.Recording:
+def get_recording(otii: otii_client.Connect, recording_id: int | None = None) -> recording.Recording:
     '''Return the recording with the given id, or the latest recording if id is None.'''
     project = otii.get_active_project()
     if recording_id is None:
@@ -155,8 +154,8 @@ def get_gpi_intervals(device: arc.Arc, rec: recording.Recording, pin: int, high:
         raise ToolError(f'Could not read GPI{pin} (channel "{channel}") of recording {rec.id}. '
                         f'Record it by passing channels=["{channel}"] to measure. (Otii: {e.message})') from e
     intervals = []
-    start: Optional[float] = None
-    previous: Optional[bool] = None
+    start: float | None = None
+    previous: bool | None = None
     for sample in values:
         value = bool(sample['value'])
         if previous is not None and value != previous:
@@ -199,7 +198,7 @@ def get_duration(device: arc.Arc, rec: recording.Recording, channel: str = 'mc')
 
 
 def energy_between_messages(device: arc.Arc, rec: recording.Recording, start_message: str,
-                            end_message: Optional[str] = None, occurrence: int = 0) -> dict:
+                            end_message: str | None = None, occurrence: int = 0) -> dict:
     '''Statistics from the n:th log line equal to start_message to the next line equal to
     end_message (defaults to start_message, i.e. one full cycle of a periodic log).'''
     end_message = end_message or start_message
