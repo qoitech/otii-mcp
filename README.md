@@ -103,6 +103,7 @@ Then use `"command": "uv"` with `"args": ["run", "--directory", "/path/to/otii-m
 | `get_log`                 | Read the recorded UART log, with timestamps, optionally filtered.                                                                                                                      |
 | `get_statistics`          | Energy, charge and min/max/average current between two timestamps.                                                                                                                     |
 | `energy_between_messages` | Energy between two UART log lines, e.g. one firmware cycle.                                                                                                                            |
+| `energy_between_gpi_edges`| Energy while digital input GPI 1 or 2 is high (or low), from one edge to the next, e.g. one active period.                                                                             |
 | `set_gpo`                 | Switch Otii digital output GPO 1 or 2.                                                                                                                                                 |
 | `set_ace_0_15_voltage`    | Set the voltage of the Ace 0–15 V pin.                                                                                                                                                 |
 
@@ -115,6 +116,10 @@ The most useful measurements come from combining the current with your firmware'
 1. Connect the device's UART TX to the Otii RX, and set `exp_voltage` to the device's IO voltage.
 2. Make your firmware print a fixed line once per cycle, e.g. `Connecting...`.
 3. Ask the assistant to measure with `uart_baudrate` set. It then calls `energy_between_messages` with that line to get the energy of one cycle. `occurrence: 1` skips the first cycle, which includes boot.
+
+## Measuring per-phase energy with GPI markers
+
+For more precise timing than log lines, drive a spare GPIO high during the phase you want to measure (e.g. while active, or during a sleep) and wire it to Otii GPI1 or GPI2. Ask the assistant to measure with `channels: ["i1"]` (or `"i2"`) and `exp_voltage` set to the device's IO voltage. It then calls `energy_between_gpi_edges` to get the energy from the rising to the falling edge. Only complete intervals count, so a pin that is already high when the recording starts does not give an interval.
 
 **Tip:** if your device is also connected over USB for flashing or debugging, it may be partly powered from USB, which makes the measurements wrong. Use `set_gpo` to switch a USB power switch off while measuring.
 

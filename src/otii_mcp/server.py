@@ -15,7 +15,8 @@ INSTRUCTIONS = '''Measures the energy consumption of a device under test powered
 Before calling measure, make sure you know the device's supply voltage and IO (UART) voltage;
 ask the user if they have not said. Never guess a supply voltage. To compare firmware versions,
 measure each and compare energy_between_messages over the same log markers, skipping the first
-cycle (occurrence >= 1) since it includes power-on.'''
+cycle (occurrence >= 1) since it includes power-on. If the firmware marks phases by driving GPIOs
+wired to the Otii GPI1/GPI2 inputs, record channels 'i1'/'i2' and use energy_between_gpi_edges.'''
 
 mcp = MCPServer('otii', version=importlib.metadata.version('otii-mcp'), instructions=INSTRUCTIONS)
 
@@ -53,11 +54,11 @@ def measure(main_voltage: float, duration_s: float = 10, max_current_A: float = 
     main_voltage: supply voltage in V. Check it is safe for the device under test.
     max_current_A: the main output cuts off above this current.
     channels: channels to record in addition to main current 'mc', e.g. 'mv' (main voltage),
-        'mp' (main power), 'i1'/'i2' (digital inputs).
+        'mp' (main power), 'i1'/'i2' (digital inputs GPI1/GPI2, for energy_between_gpi_edges).
     uart_baudrate: set to record the device's UART output (rx channel) as a timestamped log,
         which enables get_log and energy_between_messages.
     exp_voltage: expansion port voltage (1.2-5 V), i.e. the UART/GPIO logic level. Must match
-        the device's IO voltage when recording UART. Left unchanged if not given.
+        the device's IO voltage when recording UART or GPI. Left unchanged if not given.
     device: Otii device name; defaults to OTII_DEVICE or the only connected device.
     '''
     if not 0 < duration_s <= MAX_DURATION_S:
@@ -132,6 +133,32 @@ def energy_between_messages(start_message: str, end_message: Optional[str] = Non
         rec = otii_lib.get_recording(otii, recording_id)
         statistics = otii_lib.energy_between_messages(dev, rec, start_message, end_message, occurrence)
     return {'from_s': statistics['from'], 'to_s': statistics['to'], **_statistics(statistics, 'mc')}
+
+
+@mcp.tool()
+def energy_between_gpi_edges(pin: int, high: bool = True, occurrence: int = 0,
+                             recording_id: Optional[int] = None, device: Optional[str] = None) -> dict:
+    '''Energy during the n:th (0-based `occurrence`) interval where Otii digital input GPI
+    `pin` (1 or 2) is high (or low if high=false), from the edge into that level to the edge
+    out of it. For firmware that sets a GPIO wired to the Otii GPI while in a phase, e.g. active
+    or sleeping; this is more precise than UART log markers. The level at recording start is not
+    an edge, so only complete intervals count. The GPI channel must have been recorded (measure
+    with channels=["i1"] or ["i2"], and exp_voltage set to the device's IO voltage). Use
+    occurrence >= 1 to skip a first interval that includes start-up. Defaults to the latest
+    recording.'''
+    if pin not in (1, 2):
+        raise ToolError('pin must be 1 or 2')
+    with otii_lib.connect() as otii:
+        dev = otii_lib.get_device(otii, device)
+        rec = otii_lib.get_recording(otii, recording_id)
+        statistics = otii_lib.energy_between_gpi_edges(dev, rec, pin, high, occurrence)
+    return {
+        'from_s': statistics['from'],
+        'to_s': statistics['to'],
+        'duration_s': statistics['to'] - statistics['from'],
+        'intervals_found': statistics['intervals_found'],
+        **_statistics(statistics, 'mc'),
+    }
 
 
 @mcp.tool()

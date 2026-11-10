@@ -140,6 +140,47 @@ def get_log(device: arc.Arc, rec: recording.Recording) -> list[dict]:
     return rec.get_channel_data(device.id, 'rx', 0, count)['values']
 
 
+def get_gpi_intervals(device: arc.Arc, rec: recording.Recording, pin: int, high: bool = True) -> list[tuple[float, float]]:
+    '''(from, to) times of each complete interval where GPI `pin` is at the given level,
+    i.e. from the edge into that level to the edge out of it. The state at recording start
+    is not an edge, so an interval that starts at, or is still active at the end of, the
+    recording is left out.'''
+    channel = f'i{pin}'
+    try:
+        count = rec.get_channel_data_count(device.id, channel)
+        values = rec.get_channel_data(device.id, channel, 0, count)['values'] if count else []
+    except otii_exception.Otii_Exception as e:
+        if e.type == 'Not ready':
+            raise _otii_error(e) from e
+        raise ToolError(f'Could not read GPI{pin} (channel "{channel}") of recording {rec.id}. '
+                        f'Record it by passing channels=["{channel}"] to measure. (Otii: {e.message})') from e
+    intervals = []
+    start: Optional[float] = None
+    previous: Optional[bool] = None
+    for sample in values:
+        value = bool(sample['value'])
+        if previous is not None and value != previous:
+            if value == high:
+                start = sample['timestamp']
+            elif start is not None:
+                intervals.append((start, sample['timestamp']))
+                start = None
+        previous = value
+    return intervals
+
+
+def energy_between_gpi_edges(device: arc.Arc, rec: recording.Recording, pin: int,
+                             high: bool = True, occurrence: int = 0) -> dict:
+    '''Statistics for the n:th complete interval where GPI `pin` is at the given level.'''
+    intervals = get_gpi_intervals(device, rec, pin, high)
+    if len(intervals) <= occurrence:
+        raise ToolError(f'Found {len(intervals)} complete intervals with GPI{pin} '
+                        f'{"high" if high else "low"}, need at least {occurrence + 1}')
+    from_time, to_time = intervals[occurrence]
+    return {'from': from_time, 'to': to_time, 'intervals_found': len(intervals),
+            **get_statistics(device, rec, from_time, to_time)}
+
+
 def get_statistics(device: arc.Arc, rec: recording.Recording,
                    from_time: float, to_time: float, channel: str = 'mc') -> dict:
     '''min/max/average, plus energy (J) and charge (C) for current channels.'''
