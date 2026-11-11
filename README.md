@@ -25,7 +25,7 @@ The server powers your device under test from the Otii, records current and (opt
 The server is configured through environment variables, set in your MCP client's configuration:
 
 | Variable                         | Default     | Description                                                                  |
-|----------------------------------|-------------|------------------------------------------------------------------------------|
+|:---------------------------------|:------------|:-----------------------------------------------------------------------------|
 | `OTII_CREDENTIALS`               |             | Path to a JSON file with your Otii login (see `credentials.example.json`).   |
 | `OTII_USERNAME`, `OTII_PASSWORD` |             | Otii login, used when `OTII_CREDENTIALS` is not set or the file is missing.  |
 | `OTII_HOST`                      | `127.0.0.1` | Host running the Otii application.                                           |
@@ -121,7 +121,11 @@ The most useful measurements come from combining the current with your firmware'
 
 For more precise timing than log lines, drive a spare GPIO high during the phase you want to measure (e.g. while active, or during a sleep) and wire it to Otii GPI1 or GPI2. Ask the assistant to measure with `channels: ["i1"]` (or `"i2"`) and `exp_voltage` set to the device's IO voltage. It then calls `energy_between_gpi_edges` to get the energy from the rising to the falling edge. Only complete intervals count, so a pin that is already high when the recording starts does not give an interval.
 
+## USB Flashing
+
 **Tip:** if your device is also connected over USB for flashing or debugging, it may be partly powered from USB, which makes the measurements wrong. Use `set_gpo` to switch a USB power switch off while measuring.
+
+[AI-assisted power measurements with Otii MCP](https://docs.qoitech.com/en/use-cases/ai-assisted-power-measurements)
 
 ## Safety
 
